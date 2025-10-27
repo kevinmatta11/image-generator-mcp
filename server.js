@@ -1,16 +1,20 @@
 import express from "express";
 import fetch from "node-fetch";
+import cors from "cors";
 import 'dotenv/config';
 
 const app = express();
+
+// ✅ Allow CORS for ChatGPT MCP
+app.use(cors());
 app.use(express.json());
 
-// ✅ MCP metadata route — ChatGPT looks for this when creating the connector
+// ✅ Root MCP metadata endpoint
 app.get("/", (req, res) => {
   res.json({
     name: "image-generator-mcp",
     version: "1.0.0",
-    description: "Generates images from text prompts using OpenAI's image API",
+    description: "Generates images using OpenAI's image API",
     tools: [
       {
         name: "generate_image",
@@ -38,37 +42,5 @@ app.get("/", (req, res) => {
   });
 });
 
-// ✅ Actual image generation endpoint
-app.post("/sse", async (req, res) => {
-  try {
-    const { prompt, size = "1024x1024", n = 1, background = "auto" } = req.body;
-
-    const response = await fetch("https://api.openai.com/v1/images/generations", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-image-1",
-        prompt,
-        size,
-        n,
-        background,
-      }),
-    });
-
-    const data = await response.json();
-    if (data.error) throw new Error(data.error.message);
-
-    res.json({
-      image_url: data.data[0].url
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ✅ export for Vercel
-export default app;
+// ✅ Public POST route for generating images
+app.post("/sse", async (req, res) =>
